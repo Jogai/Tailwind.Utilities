@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Stu</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet package metadata -->
+    <PackageId>Scott.Tailwind.Utilities</PackageId>
+    <Version>0.4.2</Version>
+    <Authors>Wouter Dingemanse</Authors>
+    <Company>Scott Software</Company>
+    <Description>Tailwind Utility CSS Transformer — downloads Tailwind v4, discovers all utility classes, and transforms them into a standalone CSS file with computed px sizes and hex colors. Integrates with MSBuild to run on build or publish.</Description>
+    <PackageTags>tailwind;css;utility;transform;msbuild</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- Package structure: tool goes into tools/, not lib/ -->
+    <IsTool>false</IsTool>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+
+    <!-- Publish as self-contained for the tools folder -->
+    <PublishSingleFile>false</PublishSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Stu.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <!-- Pack the build integration files -->
+  <ItemGroup>
+    <None Include="build\Stu.props" Pack="true" PackagePath="build\" />
+    <None Include="build\Stu.targets" Pack="true" PackagePath="build\" />
+    <None Include="buildTransitive\Stu.props" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="buildTransitive\Stu.targets" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Pack the published tool output into the tools folder -->
+  <Target Name="PackToolOutput" AfterTargets="Publish" Condition="'$(IsPackable)' != 'false'">
+    <ItemGroup>
+      <_ToolFiles Include="$(PublishDir)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ToolFiles)" DestinationFolder="$(MSBuildProjectDirectory)\tools\%(RecursiveDir)" />
+  </Target>
+
+  <!-- Include tools/ in the package -->
+  <ItemGroup>
+    <None Include="tools\**\*" Pack="true" PackagePath="tools\" Condition="Exists('tools\')" />
+  </ItemGroup>
+
+</Project>

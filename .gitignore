@@ -1,0 +1,8 @@
+bin/
+obj/
+src/Stu/tools/
+.vs/
+*.user
+*.suo
+.idea/
+*.DotSettings.user
