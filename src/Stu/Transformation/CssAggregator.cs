@@ -28,7 +28,15 @@ public class CssAggregator
             }
         }
 
-        // Remove rules that reference unresolved CSS variables as their entire value
+        // Remove declarations with empty/whitespace-only values
+        foreach (var rule in rules)
+        {
+            rule.Declarations = rule.Declarations
+                .Where(d => !string.IsNullOrWhiteSpace(d.Value))
+                .ToList();
+        }
+
+        // Remove declarations that reference unresolved --tw-* CSS variables
         // (these are Tailwind internals that won't work standalone)
         foreach (var rule in rules)
         {
@@ -72,9 +80,9 @@ public class CssAggregator
 
     private static bool IsUnresolvedVariable(string value)
     {
-        // Values that are purely var(--tw-...) references with no fallback
-        // These won't work in a standalone CSS file
-        var trimmed = value.Trim();
-        return trimmed.StartsWith("var(--tw-") && trimmed.EndsWith(')') && !trimmed.Contains(',');
+        // Any value that still references --tw-* variables won't work standalone.
+        // This covers both simple `var(--tw-shadow)` and composite values like
+        // `var(--tw-inset-shadow), var(--tw-ring-shadow), var(--tw-shadow)`.
+        return value.Contains("var(--tw-");
     }
 }

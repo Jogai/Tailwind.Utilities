@@ -1,15 +1,14 @@
 using System.Text;
-using Stu.Config;
 
 namespace Stu.Generation;
 
 public class InputCssBuilder
 {
-    private readonly UtilityCatalog _catalog;
+    private readonly IEnumerable<string> _classNames;
 
-    public InputCssBuilder(UtilityCatalog catalog)
+    public InputCssBuilder(IEnumerable<string> classNames)
     {
-        _catalog = catalog;
+        _classNames = classNames;
     }
 
     public string Build()
@@ -26,10 +25,8 @@ public class InputCssBuilder
         sb.AppendLine();
 
         // Collect all class names and group into @source inline() directives.
-        // Tailwind v4 uses brace expansion, but for simplicity and reliability
-        // we emit one large @source inline() with space-separated class names.
         // Tailwind treats the string as "content" to scan for classes.
-        var allClasses = _catalog.GetAllClassNames().Distinct().ToList();
+        var allClasses = _classNames.Distinct().ToList();
 
         // Split into chunks to avoid excessively long lines
         const int chunkSize = 200;

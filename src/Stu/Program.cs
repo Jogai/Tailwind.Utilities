@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Stu.Config;
+using Stu.Discovery;
 using Stu.Download;
 using Stu.Generation;
 using Stu.Output;
@@ -25,7 +26,7 @@ var minifyOption = new Option<bool>("--minify") { Description = "Output minified
 
 var verboseOption = new Option<bool>("-v", ["--verbose"]) { Description = "Verbose logging" };
 
-var rootCommand = new RootCommand("Tailwind CSS Utility Extractor")
+var rootCommand = new RootCommand("Tailwind Utility CSS Transformer")
 {
     outputOption,
     colorsOption,
@@ -77,33 +78,50 @@ static async Task RunPipeline(CliOptions options, CancellationToken ct)
     Log("config", $"Base font size: {options.BaseFontSize}px");
 
     // Step 1: Download Tailwind CLI
-    Log("pipeline", "Step 1/6: Downloading Tailwind CLI...");
+    Log("pipeline", "Step 1/8: Downloading Tailwind CLI...");
     var downloader = new TailwindCliDownloader(options.CacheDir, options.ForceDownload, verbose);
     var binaryPath = await downloader.EnsureDownloadedAsync(ct);
 
-    // Step 2: Build input.css
-    Log("pipeline", "Step 2/6: Building input.css...");
-    var catalog = new UtilityCatalog(colorFamilies);
-    var builder = new InputCssBuilder(catalog);
+    // Step 2: Discover utility classes from Tailwind source
+    Log("pipeline", "Step 2/8: Discovering utility classes from Tailwind source...");
+    var discovery = new UtilityDiscovery(verbose);
+    var discovered = await discovery.DiscoverAsync(ct);
+
+    // Step 3: Assemble candidate class names
+    Log("pipeline", "Step 3/8: Assembling candidate class names...");
+    var assembler = new ClassNameAssembler(colorFamilies);
+    var classNames = assembler.Assemble(discovered);
+
+    // Step 4: Build input.css
+    Log("pipeline", "Step 4/8: Building input.css...");
+    var builder = new InputCssBuilder(classNames);
     var workDir = builder.WriteToTempDir();
     Log("generation", $"Work directory: {workDir}");
 
     try
     {
-        // Step 3: Run Tailwind CLI
-        Log("pipeline", "Step 3/6: Running Tailwind CLI...");
+        // Step 5: Run Tailwind CLI
+        Log("pipeline", "Step 5/8: Running Tailwind CLI...");
         var runner = new TailwindRunner(binaryPath, verbose);
         var outputCssPath = await runner.RunAsync(workDir, ct);
 
-        // Step 4: Parse CSS
-        Log("pipeline", "Step 4/6: Parsing generated CSS...");
+        // Step 6: Parse CSS
+        Log("pipeline", "Step 6/8: Parsing generated CSS...");
         var rawCss = await File.ReadAllTextAsync(outputCssPath, ct);
+
+        // Extract Tailwind version from the raw CSS before parsing strips it
+        var tailwindVersion = System.Text.RegularExpressions.Regex
+            .Match(rawCss, @"tailwindcss v([\d.]+)")
+            .Groups[1].Value;
+        if (!string.IsNullOrEmpty(tailwindVersion))
+            Log("parsing", $"Tailwind CSS v{tailwindVersion}");
+
         var parser = new CssParser();
         var rules = parser.Parse(rawCss);
         Log("parsing", $"Parsed {rules.Count} rules");
 
-        // Step 5: Filter & Transform
-        Log("pipeline", "Step 5/7: Filtering...");
+        // Step 7: Filter & Transform
+        Log("pipeline", "Step 7/8: Filtering...");
 
         rules = VariantFilter.Filter(rules);
         Log("filter", $"After variant filter: {rules.Count} rules");
@@ -111,8 +129,8 @@ static async Task RunPipeline(CliOptions options, CancellationToken ct)
         rules = ArbitraryValueFilter.Filter(rules);
         Log("filter", $"After arbitrary value filter: {rules.Count} rules");
 
-        // Step 6: Resolve CSS variables and transform values
-        Log("pipeline", "Step 6/7: Resolving variables and transforming values...");
+        // Resolve CSS variables and transform values
+        Log("pipeline", "Resolving variables and transforming values...");
         var variableResolver = new CssVariableResolver(options.BaseFontSize);
         rules = variableResolver.ExtractAndRemoveThemeRules(rules);
         Log("resolve", $"After extracting theme: {rules.Count} rules");
@@ -142,9 +160,9 @@ static async Task RunPipeline(CliOptions options, CancellationToken ct)
         rules = aggregator.Aggregate(rules);
         Log("aggregate", $"After aggregation: {rules.Count} rules");
 
-        // Step 7: Write output
-        Log("pipeline", "Step 7/7: Writing output...");
-        var writer = new CssWriter(options.Minify);
+        // Step 8: Write output
+        Log("pipeline", "Step 8/8: Writing output...");
+        var writer = new CssWriter(options.Minify, tailwindVersion);
         writer.WriteToFile(rules, options.Output);
 
         var fileSize = new FileInfo(options.Output).Length;
