@@ -103,7 +103,7 @@ static async Task RunPipeline(CliOptions options, CancellationToken ct)
         Log("parsing", $"Parsed {rules.Count} rules");
 
         // Step 5: Filter & Transform
-        Log("pipeline", "Step 5/6: Filtering and transforming...");
+        Log("pipeline", "Step 5/7: Filtering...");
 
         rules = VariantFilter.Filter(rules);
         Log("filter", $"After variant filter: {rules.Count} rules");
@@ -111,9 +111,15 @@ static async Task RunPipeline(CliOptions options, CancellationToken ct)
         rules = ArbitraryValueFilter.Filter(rules);
         Log("filter", $"After arbitrary value filter: {rules.Count} rules");
 
-        // Transform values
+        // Step 6: Resolve CSS variables and transform values
+        Log("pipeline", "Step 6/7: Resolving variables and transforming values...");
+        var variableResolver = new CssVariableResolver(options.BaseFontSize);
+        rules = variableResolver.ExtractAndRemoveThemeRules(rules);
+        Log("resolve", $"After extracting theme: {rules.Count} rules");
+
         var unitConverter = new UnitConverter(options.BaseFontSize);
         var colorConverter = new ColorConverter();
+        var lineHeightConverter = new LineHeightConverter(options.BaseFontSize);
 
         foreach (var rule in rules)
         {
@@ -121,10 +127,14 @@ static async Task RunPipeline(CliOptions options, CancellationToken ct)
             {
                 var decl = rule.Declarations[i];
                 var value = decl.Value;
+                value = variableResolver.Resolve(value);
                 value = unitConverter.Convert(value);
                 value = colorConverter.Convert(value);
                 rule.Declarations[i] = decl.WithValue(value);
             }
+
+            // Convert unitless line-heights to px (needs font-size context from the rule)
+            lineHeightConverter.ConvertRule(rule);
         }
 
         // Aggregate
@@ -132,8 +142,8 @@ static async Task RunPipeline(CliOptions options, CancellationToken ct)
         rules = aggregator.Aggregate(rules);
         Log("aggregate", $"After aggregation: {rules.Count} rules");
 
-        // Step 6: Write output
-        Log("pipeline", "Step 6/6: Writing output...");
+        // Step 7: Write output
+        Log("pipeline", "Step 7/7: Writing output...");
         var writer = new CssWriter(options.Minify);
         writer.WriteToFile(rules, options.Output);
 
