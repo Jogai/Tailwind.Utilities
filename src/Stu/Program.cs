@@ -6,28 +6,26 @@ using Stu.Output;
 using Stu.Parsing;
 using Stu.Transformation;
 
-var outputOption = new Option<string>("-o", "Output CSS file path") { DefaultValueFactory = _ => "tailwind-utilities.css" };
-outputOption.Aliases.Add("--output");
+var outputOption = new Option<string>("-o", ["--output"]) { Description = "Output CSS file path", DefaultValueFactory = _ => "tailwind-utilities.css" };
 
-var colorsOption = new Option<string>("-c", "Comma-separated color families to include, or \"all\"") { DefaultValueFactory = _ => "all" };
-colorsOption.Aliases.Add("--colors");
+var colorsOption = new Option<string>("-c", ["--colors"]) { Description = "Comma-separated color families to include, or \"all\"", DefaultValueFactory = _ => "all" };
 
-var cacheDirOption = new Option<string>("--cache-dir", "Directory to cache the Tailwind binary")
+var cacheDirOption = new Option<string>("--cache-dir")
 {
+    Description = "Directory to cache the Tailwind binary",
     DefaultValueFactory = _ => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".stu", "cache")
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "tailwind")
 };
 
-var forceDownloadOption = new Option<bool>("--force-download", "Force re-download of Tailwind CLI");
+var forceDownloadOption = new Option<bool>("--force-download") { Description = "Force re-download of Tailwind CLI" };
 
-var baseFontSizeOption = new Option<int>("--base-font-size", "Base font size in px for rem conversion") { DefaultValueFactory = _ => 16 };
+var baseFontSizeOption = new Option<int>("--base-font-size") { Description = "Base font size in px for rem conversion", DefaultValueFactory = _ => 16 };
 
-var minifyOption = new Option<bool>("--minify", "Output minified CSS");
+var minifyOption = new Option<bool>("--minify") { Description = "Output minified CSS" };
 
-var verboseOption = new Option<bool>("-v", "Verbose logging");
-verboseOption.Aliases.Add("--verbose");
+var verboseOption = new Option<bool>("-v", ["--verbose"]) { Description = "Verbose logging" };
 
-var rootCommand = new RootCommand("Stu — Tailwind CSS Utility Extractor")
+var rootCommand = new RootCommand("Tailwind CSS Utility Extractor")
 {
     outputOption,
     colorsOption,
