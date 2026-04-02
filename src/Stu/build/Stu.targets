@@ -1,0 +1,42 @@
+<Project>
+
+  <!-- Run on Build when StuRunOn is Build or Both -->
+  <Target Name="StuTransformOnBuild"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(StuRunOn)' == 'Build' Or '$(StuRunOn)' == 'Both'">
+    <CallTarget Targets="_StuTransform" />
+  </Target>
+
+  <!-- Run on Publish when StuRunOn is Publish or Both -->
+  <Target Name="StuTransformOnPublish"
+          BeforeTargets="BeforePublish"
+          Condition="'$(StuRunOn)' == 'Publish' Or '$(StuRunOn)' == 'Both'">
+    <CallTarget Targets="_StuTransform" />
+  </Target>
+
+  <!-- The actual transform target -->
+  <Target Name="_StuTransform">
+
+    <PropertyGroup>
+      <_StuArgs>-o "$(StuOutput)"</_StuArgs>
+      <_StuArgs>$(_StuArgs) -c "$(StuColors)"</_StuArgs>
+      <_StuArgs>$(_StuArgs) --base-font-size $(StuBaseFontSize)</_StuArgs>
+      <_StuArgs>$(_StuArgs) --cache-dir "$(StuCacheDir)"</_StuArgs>
+      <_StuArgs Condition="'$(StuMinify)' == 'true'">$(_StuArgs) --minify</_StuArgs>
+      <_StuArgs Condition="'$(StuForceDownload)' == 'true'">$(_StuArgs) --force-download</_StuArgs>
+    </PropertyGroup>
+
+    <Message Importance="high" Text="Stu: Transforming Tailwind utilities → $(StuOutput)" />
+
+    <Exec Command="dotnet &quot;$(_StuToolPath)&quot; $(_StuArgs)"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMsBuild="true" />
+
+  </Target>
+
+  <!-- Allow running manually: dotnet msbuild -t:StuTransform -->
+  <Target Name="StuTransform">
+    <CallTarget Targets="_StuTransform" />
+  </Target>
+
+</Project>

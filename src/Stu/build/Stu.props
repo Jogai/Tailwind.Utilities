@@ -1,0 +1,31 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Output path for the generated CSS file (relative to project dir) -->
+    <StuOutput Condition="'$(StuOutput)' == ''">tailwind-utilities.css</StuOutput>
+
+    <!-- Comma-separated color families, or "all" -->
+    <StuColors Condition="'$(StuColors)' == ''">all</StuColors>
+
+    <!-- Base font size in px for rem-to-px conversion -->
+    <StuBaseFontSize Condition="'$(StuBaseFontSize)' == ''">16</StuBaseFontSize>
+
+    <!-- Whether to minify the output -->
+    <StuMinify Condition="'$(StuMinify)' == ''">false</StuMinify>
+
+    <!-- When to run: Build, Publish, or Both -->
+    <StuRunOn Condition="'$(StuRunOn)' == ''">Publish</StuRunOn>
+
+    <!-- Force re-download of the Tailwind CLI -->
+    <StuForceDownload Condition="'$(StuForceDownload)' == ''">false</StuForceDownload>
+
+    <!-- Directory to cache the Tailwind CLI binary -->
+    <StuCacheDir Condition="'$(StuCacheDir)' == ''">$(USERPROFILE)\.cache\tailwind</StuCacheDir>
+    <StuCacheDir Condition="'$(StuCacheDir)' == '' Or !Exists('$(USERPROFILE)')">$(HOME)/.cache/tailwind</StuCacheDir>
+
+    <!-- Path to the Stu tool DLL (resolved from the NuGet package) -->
+    <_StuToolDir>$(MSBuildThisFileDirectory)..\tools\</_StuToolDir>
+    <_StuToolPath>$(_StuToolDir)Stu.dll</_StuToolPath>
+  </PropertyGroup>
+
+</Project>
